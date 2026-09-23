@@ -164,6 +164,19 @@ List<TuberTopping> tuberToppings = new List<TuberTopping>
     }
 };
 
+//TuberOrders get all
+app.MapGet("/tuberOrders", () =>
+{
+    return tuberOrders.Select(t => new TuberOrderDTO
+    {
+        Id = t.Id,
+        OrderPlacedOnDate = t.OrderPlacedOnDate,
+        CustomerId = t.CustomerId,
+        TuberDriverId = t.TuberDriverId,
+        DeliveredOnDate = t.DeliveredOnDate
+    });
+});
+
 app.Run();
 //don't touch or move this!
 public partial class Program { }
