@@ -177,6 +177,154 @@ app.MapGet("/tuberOrders", () =>
     });
 });
 
+//TuberOrders get by Id
+app.MapGet("/tuberOrders/{id}", (int id) =>
+{
+    TuberOrder? tuberOrder = tuberOrders.FirstOrDefault(
+        to => to.Id == id
+    );
+
+    if (tuberOrder == null)
+    {
+        return Results.NotFound();
+    }
+
+    Customer? customer = customers.FirstOrDefault(
+        c => c.Id == tuberOrder.CustomerId
+    );
+
+    TuberDriver? driver = tuberOrder.TuberDriverId == null
+        ? null
+        : tuberDrivers.FirstOrDefault(
+            d => d.Id == tuberOrder.TuberDriverId
+        );
+
+    List<Topping> toppingsForOrder = tuberToppings
+        .Where(tt => tt.TuberOrderId == tuberOrder.Id)
+        .Select(tt => toppings.First(t => t.Id == tt.ToppingId))
+        .ToList();
+
+    return Results.Ok(new TuberOrderDTO
+    {
+        Id = tuberOrder.Id,
+        OrderPlacedOnDate = tuberOrder.OrderPlacedOnDate,
+
+        CustomerId = tuberOrder.CustomerId,
+        Customer = new CustomerDTO
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Address = customer.Address
+        },
+
+        TuberDriverId = tuberOrder.TuberDriverId,
+        TuberDriver = driver == null
+            ? null
+            : new TuberDriverDTO
+            {
+                Id = driver.Id,
+                Name = driver.Name
+            },
+
+        DeliveredOnDate = tuberOrder.DeliveredOnDate,
+
+        Toppings = toppingsForOrder.Select(t => new ToppingDTO
+        {
+            Id = t.Id,
+            Name = t.Name
+        }).ToList()
+    });
+});
+
+//TuberOrder create
+app.MapPost("/tuberorders", (TuberOrderDTO tuberOrderDTO) =>
+{
+    TuberOrder newTuberOrder = new TuberOrder
+    {
+        Id = tuberOrders.Max(toppings => toppings.Id) + 1,
+        OrderPlacedOnDate = DateOnly.FromDateTime(DateTime.Now),
+        CustomerId = tuberOrderDTO.CustomerId,
+        TuberDriverId = tuberOrderDTO.TuberDriverId,
+        DeliveredOnDate = tuberOrderDTO.DeliveredOnDate
+    };
+
+    tuberOrders.Add(newTuberOrder);
+
+    return Results.Created(
+        $"/tuberorders/{newTuberOrder.Id}",
+        new TuberOrderDTO
+        {
+            Id = newTuberOrder.Id,
+            OrderPlacedOnDate = newTuberOrder.OrderPlacedOnDate,
+            CustomerId = newTuberOrder.CustomerId,
+            TuberDriverId = newTuberOrder.TuberDriverId,
+            DeliveredOnDate = newTuberOrder.DeliveredOnDate
+        }
+    );
+});
+
+//TuberOrders assign driver
+app.MapPut("/tuberorders/{id}", (int id, TuberOrderDTO tuberOrderDTO) =>
+{
+    TuberOrder orderToUpdate = tuberOrders.FirstOrDefault(t => t.Id == id);
+    if (orderToUpdate == null)
+    {
+        return Results.NotFound();
+    }
+
+    TuberDriver driver = tuberDrivers.FirstOrDefault(d => d.Id == tuberOrderDTO.TuberDriverId);
+    if (driver == null)
+    {
+        return Results.BadRequest("No driver exists with that Id.");
+    }
+
+    orderToUpdate.TuberDriverId = tuberOrderDTO.TuberDriverId;
+
+    return Results.NoContent();
+});
+
+//TuberOrders complete
+app.MapPost("/tuberorders/{id}/complete", (int id) =>
+{
+    TuberOrder orderToComplete = tuberOrders.FirstOrDefault(t => t.Id == id);
+    if (orderToComplete == null)
+    {
+        return Results.NotFound();
+    }
+
+    orderToComplete.DeliveredOnDate = DateOnly.FromDateTime(DateTime.Now);
+
+    return Results.NoContent();
+});
+
+//Toppings get all
+app.MapGet("/toppings", () =>
+{
+    return toppings.Select(t => new ToppingDTO
+    {
+        Id = t.Id,
+        Name = t.Name
+    });
+});
+
+//Toppings get by id
+app.MapGet("/toppings/{id}", (int id) =>
+{
+    Topping topping = toppings.FirstOrDefault(t => t.Id == id);
+    if (topping == null)
+    {
+        return Results.NotFound();
+    }
+
+    return Results.Ok(new ToppingDTO
+    {
+        Id = topping.Id,
+        Name = topping.Name
+    });
+});
+
+
+
 app.Run();
 //don't touch or move this!
 public partial class Program { }
