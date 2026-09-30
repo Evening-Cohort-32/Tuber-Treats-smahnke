@@ -407,10 +407,73 @@ app.MapGet("/customers/{id}", (int id) =>
 });
 
 //Add a Customer (return the new customer)
+app.MapPost("/customers", (Customer customer) =>
+{
+    if (string.IsNullOrWhiteSpace(customer.Name))
+    {
+        return Results.BadRequest("Customer name is required");
+    }
 
+    customer.Id = customers.Count > 0 ? customers.Max(c => c.Id) + 1:1;
+    customers.Add(customer);
+
+    return Results.Created($"/customers/{customer.Id}", new CustomerDTO
+    {
+        Id = customer.Id,
+        Name = customer.Name,
+        Address = customer.Address
+    });
+});
 
 //Delete a Customer
+app.MapDelete("/customers/{id}", (int id) =>
+{
+    Customer customerDelete = customers.FirstOrDefault(c => c.Id == id);
+    if (customerDelete == null)
+    {
+        return Results.NoContent();
+    }
+    else
+    {
+        return Results.Ok(customers.Remove(customerDelete));
+    }
+});
 
+//Get all employees
+app.MapGet("/tuberdrivers", () =>
+{
+    return tuberDrivers.Select(td => new TuberDriverDTO
+    {
+        Id = td.Id,
+        Name = td.Name
+    });
+});
+
+//Get an employee by id with their deliveries
+app.MapGet("/tuberdrivers/{id}", (int id) =>
+{
+    TuberDriver tuberDriver = tuberDrivers.FirstOrDefault(td => td.Id == id);
+    if (tuberDriver == null)
+    {
+        return Results.NotFound();
+    }
+
+    List<TuberOrder> orders = tuberOrders.Where(t => t.TuberDriverId == id).ToList();
+
+    return Results.Ok(new TuberDriverDTO
+    {
+        Id = tuberDriver.Id,
+        Name = tuberDriver.Name,
+        TuberDeliveries = orders.Select(td => new TuberOrderDTO
+        {
+            Id = td.Id,
+            OrderPlacedOnDate = td.OrderPlacedOnDate,
+            CustomerId = td.CustomerId,
+            TuberDriverId = td.TuberDriverId,
+            DeliveredOnDate = td.DeliveredOnDate
+        }).ToList()
+    });
+});
 
 app.Run();
 //don't touch or move this!
